@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.categorias import POR_SLUG, zona_de
+from app.core.categorias import POR_SLUG, normalizar_temporadas, temporadas_de, zona_de
 from app.models import EstadoPrenda, Prenda
 
 
@@ -35,6 +35,7 @@ class ZonaRead(BaseModel):
 class CatalogoRead(BaseModel):
     zonas: list[ZonaRead]
     categorias: list[CategoriaRead]
+    temporadas: list[ZonaRead]
 
 
 # ── Prenda ────────────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ class PrendaRead(BaseModel):
     categoria: Optional[str]
     zona: Optional[str]
     nombre: Optional[str]
+    temporadas: list[str]
     estado: EstadoPrenda
     error: Optional[str]
     corte_auto: Optional[float]
@@ -56,7 +58,8 @@ class PrendaRead(BaseModel):
 
     @classmethod
     def desde(cls, p: Prenda) -> "PrendaRead":
-        return cls(**p.model_dump(exclude={"usuario_id", "nombre_archivo"}), zona=zona_de(p.categoria))
+        datos = p.model_dump(exclude={"usuario_id", "nombre_archivo", "temporadas"})
+        return cls(**datos, zona=zona_de(p.categoria), temporadas=temporadas_de(p.temporadas))
 
 
 class PrendaUpdate(BaseModel):
@@ -64,12 +67,20 @@ class PrendaUpdate(BaseModel):
 
     categoria: Optional[str] = None
     nombre: Optional[str] = Field(default=None, max_length=100)
+    temporadas: Optional[list[str]] = None  # lista completa; [] = todo el año
     escala: Optional[float] = Field(default=None, ge=0.3, le=2.5)
     desplazamiento: Optional[float] = Field(default=None, ge=-0.5, le=0.5)
     # null explícito = volver al corte automático
     corte_manual: Optional[float] = Field(default=None, ge=0.0, le=0.9)
 
     _v_cat = field_validator("categoria")(_validar_categoria)
+
+    @field_validator("temporadas")
+    @classmethod
+    def _v_temporadas(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is not None:
+            normalizar_temporadas(v)  # lanza ValueError si hay alguna desconocida
+        return v
 
 
 # ── Conjunto ──────────────────────────────────────────────────────────────────

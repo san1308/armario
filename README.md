@@ -31,15 +31,18 @@ Compose + Cloudflare Tunnel/Access).
   *Arriba*, *Abajo* y *Vestidos* (que sustituye a arriba + abajo).
   - Deslizar sobre el espejo o usar las flechas cambia la prenda de la zona
     seleccionada; tocar una prenda del espejo selecciona su zona.
+  - **Temporada** (todo el año / verano / entretiempo / invierno): por defecto la
+    del mes actual; filtra las prendas y lo que sale en "Sorpréndeme". Una prenda
+    sin temporada marcada sale en todas.
   - **Fijar** una zona y **Sorpréndeme** para combinaciones aleatorias del resto.
   - **Ajustar** tamaño y altura de cada prenda (se guarda en la prenda: se
     ajusta una vez y encaja siempre).
   - **Guardar conjunto**.
 - **Armario**: subir fotos (varias a la vez, JPEG/PNG/HEIC), ver el progreso
-  del recorte, filtrar por zona o "Sin clasificar".
-  - Ficha de prenda: categoría (al clasificar una prenda sin clasificar salta
-    sola a la siguiente), nombre, **corte de la percha** con vista previa,
-    volver a quitar el fondo, borrar.
+  del recorte, filtrar por zona / "Sin clasificar" y por temporada / "Sin temporada".
+  - Ficha de prenda: categoría, **temporadas** (varias a la vez), nombre,
+    **corte de la percha** con vista previa, volver a quitar el fondo, borrar.
+    Botones Anterior/Siguiente para recorrer la lista filtrada en serie.
 - **Conjuntos**: combinaciones guardadas en miniatura; tocar una la abre en el probador.
 - **Varios usuarios**: cada email de Cloudflare Access tiene su propio armario.
 - Responsive: pensado para móvil; en ordenador el espejo queda a la izquierda
@@ -146,10 +149,16 @@ scp "Fotos en iCloud"/*.JPEG pi@raspberry:~/armario/importar/
 make importar EMAIL=email.de.mama@ejemplo.com
 ```
 
-`scripts/clasificacion_inicial.csv` trae una **propuesta de categoría** para
-cada una de las 106 fotos actuales (hecha mirando las fotos). Se corrige
+`scripts/clasificacion_inicial.csv` trae una **propuesta de categoría y
+temporadas** para cada una de las 106 fotos actuales (hecha mirando las fotos). Se corrige
 desde la app en la ficha de cada prenda. El script es idempotente: se puede
 relanzar sin duplicar.
+
+Si el armario se importó antes de que existieran las temporadas:
+
+```bash
+make temporadas EMAIL=email.de.mama@ejemplo.com   # solo rellena las que no tienen
+```
 
 También se pueden subir desde el móvil con "Añadir fotos" (se suben de 4 en 4).
 
@@ -169,9 +178,9 @@ También se pueden subir desde el móvil con "Añadir fotos" (se suben de 4 en 4
 | GET | `/api/v1/health` | Estado |
 | GET | `/api/v1/yo` | Usuario actual |
 | GET | `/api/v1/catalogo` | Zonas y categorías |
-| GET | `/api/v1/prendas/?zona=&categoria=&sin_clasificar=` | Listar |
+| GET | `/api/v1/prendas/?zona=&categoria=&sin_clasificar=&temporada=` | Listar (`temporada`: slug o `ninguna`) |
 | POST | `/api/v1/prendas/` | Subir (`multipart`: `fotos[]`, `categoria?`) |
-| GET/PATCH/DELETE | `/api/v1/prendas/{id}` | Ver / editar (`categoria`, `nombre`, `escala`, `desplazamiento`, `corte_manual`) / borrar |
+| GET/PATCH/DELETE | `/api/v1/prendas/{id}` | Ver / editar (`categoria`, `nombre`, `temporadas`, `escala`, `desplazamiento`, `corte_manual`) / borrar |
 | POST | `/api/v1/prendas/{id}/reprocesar` | Volver a quitar el fondo |
 | GET | `/api/v1/prendas/{id}/imagen/{original\|sinfondo\|recorte\|mini}` | Imágenes |
 | GET/POST | `/api/v1/conjuntos/` | Listar / guardar |
@@ -183,6 +192,7 @@ Documentación interactiva en `/docs`.
 
 - **Fase 1** ✅ Probador arriba/abajo/encima/vestido, armario, recorte
   automático, corte de percha, conjuntos, multiusuario.
-- **Fase 2** Etiquetas (color, temporada, ocasión) y filtros en el probador;
+- **Fase 1.1** ✅ Temporadas (verano, entretiempo, invierno) con filtro en probador y armario.
+- **Fase 2** Etiquetas (color, ocasión) y filtros en el probador;
   goma de borrar para retocar el recorte (perchas de madera); "por dentro / por fuera".
 - **Fase 3** Calzado y complementos; historial ("qué me puse"); compartir un conjunto.

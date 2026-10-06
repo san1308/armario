@@ -23,6 +23,8 @@ class Prenda(SQLModel, table=True):
     # Slug de app.core.categorias; None = sin clasificar
     categoria: Optional[str] = Field(default=None, index=True, max_length=30)
     nombre: Optional[str] = Field(default=None, max_length=100)
+    # Temporadas separadas por comas en orden fijo: "verano,entretiempo". Vacío = todo el año.
+    temporadas: str = Field(default="", max_length=40)
 
     estado: EstadoPrenda = Field(default=EstadoPrenda.pendiente)
     error: Optional[str] = Field(default=None, max_length=500)

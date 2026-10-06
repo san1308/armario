@@ -192,3 +192,56 @@ def test_primer_acceso_concurrente(client):
     with ThreadPoolExecutor(8) as ex:
         codigos = list(ex.map(lambda r: client.get(r, headers=nuevo).status_code, rutas))
     assert codigos == [200] * len(rutas)
+
+
+def test_temporadas(client):
+    [a] = subir(client, categoria="top")
+    [b] = subir(client, categoria="jersey")
+    [c] = subir(client, categoria="blusa")
+    assert a["temporadas"] == []
+
+    # Se guarda en orden fijo y sin duplicados
+    r = client.patch(f"/api/v1/prendas/{a['id']}", json={"temporadas": ["entretiempo", "verano", "verano"]}, headers=MAMA)
+    assert r.json()["temporadas"] == ["verano", "entretiempo"]
+    client.patch(f"/api/v1/prendas/{b['id']}", json={"temporadas": ["invierno"]}, headers=MAMA)
+
+    ids = lambda q: {p["id"] for p in client.get(f"/api/v1/prendas/?{q}", headers=MAMA).json()}
+    assert ids("temporada=verano") == {a["id"]}
+    assert ids("temporada=entretiempo") == {a["id"]}
+    assert ids("temporada=invierno") == {b["id"]}
+    assert ids("temporada=ninguna") == {c["id"]}
+
+    assert client.patch(f"/api/v1/prendas/{a['id']}", json={"temporadas": ["otoño"]}, headers=MAMA).status_code == 422
+    assert client.get("/api/v1/prendas/?temporada=primavera", headers=MAMA).status_code == 422
+
+    # Lista vacía = todo el año
+    assert client.patch(f"/api/v1/prendas/{a['id']}", json={"temporadas": []}, headers=MAMA).json()["temporadas"] == []
+    assert [t["slug"] for t in client.get("/api/v1/catalogo").json()["temporadas"]] == ["verano", "entretiempo", "invierno"]
+
+
+def test_migracion_desde_0001():
+    """Una BD creada con la fase 1 (sin temporadas) se actualiza sin perder prendas."""
+    import sqlite3
+    import tempfile
+
+    from alembic import command
+    from alembic.config import Config
+
+    from app.core.config import settings
+
+    ruta = tempfile.mktemp(suffix=".db")
+    cfg = Config("alembic.ini")
+    original = settings.database_url
+    settings.database_url = f"sqlite:///{ruta}"
+    try:
+        command.upgrade(cfg, "0001")
+        con = sqlite3.connect(ruta)
+        con.execute("INSERT INTO usuario (email, nombre, creado) VALUES ('a@b.c', 'A', '2026-10-06')")
+        con.execute("INSERT INTO prenda (usuario_id, estado, escala, desplazamiento, version, creada) "
+                    "VALUES (1, 'lista', 1.0, 0.0, 1, '2026-10-06')")
+        con.commit(); con.close()
+        command.upgrade(cfg, "head")
+        con = sqlite3.connect(ruta)
+        assert con.execute("SELECT temporadas FROM prenda").fetchall() == [("",)]
+    finally:
+        settings.database_url = original

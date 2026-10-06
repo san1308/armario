@@ -1,7 +1,9 @@
 // Vista Probador: el espejo, las zonas, la tira de prendas y las acciones.
 import { api, urlImagen } from './api.js';
 import { componer } from './componer.js';
-import { estado, listasDeZona, nombreCategoria, prendaPorId, reemplazarPrenda, recargarConjuntos } from './estado.js';
+import {
+  estado, listasDeZona, nombreCategoria, prendaPorId, reemplazarPrenda, recargarConjuntos, temporadaDeHoy, valeParaTemporada,
+} from './estado.js';
 import { aviso, debounce, el, ICONOS } from './util.js';
 
 const CLAVE_LOCAL = 'armario.probador';
@@ -14,6 +16,7 @@ const p = {
   zonaActiva: 'arriba',
   fijadas: new Set(),
   ajusteAbierto: false,
+  temporada: temporadaDeHoy(),        // '' = todo el año
 };
 
 const $ = (id) => document.getElementById(id);
@@ -21,30 +24,33 @@ const $ = (id) => document.getElementById(id);
 // ── Persistencia ligera (solo comodidad: si falla, no pasa nada) ───────────────
 function guardarLocal() {
   try {
-    localStorage.setItem(CLAVE_LOCAL, JSON.stringify({ modo: p.modo, sel: p.sel, zonaActiva: p.zonaActiva, fijadas: [...p.fijadas] }));
+    localStorage.setItem(CLAVE_LOCAL, JSON.stringify({ modo: p.modo, sel: p.sel, zonaActiva: p.zonaActiva, fijadas: [...p.fijadas], temporada: p.temporada }));
   } catch { /* modo privado o almacenamiento bloqueado */ }
 }
 function leerLocal() {
   try {
     const d = JSON.parse(localStorage.getItem(CLAVE_LOCAL) || 'null');
     if (d) Object.assign(p, { modo: d.modo, sel: { ...p.sel, ...d.sel }, zonaActiva: d.zonaActiva, fijadas: new Set(d.fijadas) });
+    if (d && typeof d.temporada === 'string') p.temporada = d.temporada;
   } catch { /* ignorar */ }
 }
 
 // ── Lógica ─────────────────────────────────────────────────────────────────────
 const zonasVisibles = () => (p.modo === 'entera' ? ZONAS_ENTERA : ZONAS_SEPARADO);
 const opcional = (zona) => zona === 'exterior';
+/** Prendas listas de una zona que valen para la temporada elegida. */
+const disponibles = (zona) => listasDeZona(zona).filter((x) => valeParaTemporada(x, p.temporada));
 
 /** Corrige la selección: ids que ya no existen, zonas vacías → primera prenda disponible. */
 function sanear() {
   for (const zona of ['exterior', 'arriba', 'abajo', 'entera']) {
-    const lista = listasDeZona(zona);
+    const lista = disponibles(zona);
     const actual = prendaPorId(p.sel[zona]);
-    if (!actual || actual.zona !== zona || actual.estado !== 'lista') {
+    if (!actual || actual.zona !== zona || actual.estado !== 'lista' || !valeParaTemporada(actual, p.temporada)) {
       p.sel[zona] = opcional(zona) ? null : (lista[0]?.id ?? null);
     }
   }
-  if (p.modo === 'entera' && !listasDeZona('entera').length) p.modo = 'separado';
+  if (p.modo === 'entera' && !disponibles('entera').length) p.modo = 'separado';
   if (!zonasVisibles().includes(p.zonaActiva)) p.zonaActiva = p.modo === 'entera' ? 'entera' : 'arriba';
 }
 
@@ -66,7 +72,7 @@ function elegir(zona, id) {
 
 function moverEnZona(paso) {
   const zona = p.zonaActiva;
-  const ids = listasDeZona(zona).map((x) => x.id);
+  const ids = disponibles(zona).map((x) => x.id);
   if (opcional(zona)) ids.unshift(null);
   if (!ids.length) return;
   const i = ids.indexOf(p.sel[zona]);
@@ -81,7 +87,7 @@ function sorprender() {
   for (const zona of zonasVisibles()) {
     if (p.fijadas.has(zona)) continue;
     if (zona === 'exterior' && p.sel.exterior == null) continue;  // si no lleva nada encima, se respeta
-    p.sel[zona] = azar(listasDeZona(zona).map((x) => x.id), p.sel[zona]);
+    p.sel[zona] = azar(disponibles(zona).map((x) => x.id), p.sel[zona]);
   }
   guardarLocal();
   render();
@@ -113,7 +119,7 @@ function renderZonas() {
   const cont = $('zonas');
   cont.replaceChildren();
   for (const z of estado.zonas) {
-    const n = listasDeZona(z.slug).length;
+    const n = disponibles(z.slug).length;
     if (!n && z.slug !== 'arriba' && z.slug !== 'abajo') continue;  // no mostrar zonas sin prendas
     const visible = zonasVisibles().includes(z.slug) && (z.slug !== 'exterior' || p.sel.exterior);
     const chip = el('button.zona-chip', {
@@ -130,9 +136,20 @@ function renderZonas() {
   }
 }
 
+function renderTemporadas() {
+  const cont = $('temporadas-probador');
+  cont.replaceChildren();
+  for (const [slug, nombre] of [['', 'Todo el año'], ...estado.temporadas.map((t) => [t.slug, t.nombre])]) {
+    cont.append(el('button.temporada', {
+      role: 'radio', 'aria-checked': String(p.temporada === slug),
+      onclick: () => { p.temporada = slug; guardarLocal(); render(); },
+    }, nombre));
+  }
+}
+
 function renderTira() {
   const zona = p.zonaActiva;
-  const lista = listasDeZona(zona);
+  const lista = disponibles(zona);
   const actual = prendaPorId(p.sel[zona]);
   $('tira-titulo').textContent = actual ? (actual.nombre || nombreCategoria(actual.categoria)) : (opcional(zona) ? 'Nada encima' : '');
   const fijar = $('btn-fijar');
@@ -146,7 +163,10 @@ function renderTira() {
     tira.append(el('button.miniatura.nada', { role: 'option', 'aria-selected': String(p.sel[zona] == null), onclick: () => elegir(zona, null) }, 'Nada encima'));
   }
   if (!lista.length) {
-    tira.append(el('p.tira-vacia', {}, 'No hay prendas de este tipo todavía.'));
+    const hayFueraDeTemporada = listasDeZona(zona).length > 0;
+    tira.append(el('p.tira-vacia', {}, hayFueraDeTemporada
+      ? 'No hay prendas de este tipo para esta temporada.'
+      : 'No hay prendas de este tipo todavía.'));
     return;
   }
   for (const pr of lista) {
@@ -173,6 +193,7 @@ function renderAjuste() {
 export function render() {
   if (!estado.usuario) return;
   sanear();
+  renderTemporadas();
   renderEspejo();
   renderZonas();
   renderTira();
@@ -189,12 +210,15 @@ export function cargarConjunto(c) {
     abajo: c.abajo_id ?? p.sel.abajo,
   });
   p.zonaActiva = p.modo === 'entera' ? 'entera' : 'arriba';
+  const prendas = [c.exterior_id, c.arriba_id, c.abajo_id, c.entera_id].map(prendaPorId).filter(Boolean);
+  if (prendas.some((x) => !valeParaTemporada(x, p.temporada))) p.temporada = '';
   guardarLocal();
   location.hash = '#probador';
 }
 
 export function probarPrenda(prenda) {
   if (!prenda.zona) return;
+  if (!valeParaTemporada(prenda, p.temporada)) p.temporada = '';
   elegir(prenda.zona, prenda.id);
   location.hash = '#probador';
 }

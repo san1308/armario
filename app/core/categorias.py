@@ -50,8 +50,30 @@ CATEGORIAS: list[Categoria] = [
     Categoria("mono", "Mono", "entera"),
 ]
 
+# Temporadas: una prenda puede tener varias (p. ej. verano + entretiempo).
+# Una prenda sin ninguna se considera "para todo el año" en el probador.
+TEMPORADAS: list[Zona] = [
+    Zona("verano", "Verano"),
+    Zona("entretiempo", "Entretiempo"),
+    Zona("invierno", "Invierno"),
+]
+TEMPORADA_SLUGS: list[str] = [t.slug for t in TEMPORADAS]
+
 POR_SLUG: dict[str, Categoria] = {c.slug: c for c in CATEGORIAS}
 ZONA_SLUGS: set[str] = {z.slug for z in ZONAS}
+
+
+def normalizar_temporadas(valores: list[str] | None) -> str:
+    """Lista → texto ordenado y sin duplicados para guardar en BD ("verano,entretiempo")."""
+    vistos = set(valores or [])
+    desconocidas = vistos - set(TEMPORADA_SLUGS)
+    if desconocidas:
+        raise ValueError(f"Temporada desconocida: {', '.join(sorted(desconocidas))}")
+    return ",".join(t for t in TEMPORADA_SLUGS if t in vistos)
+
+
+def temporadas_de(texto: str | None) -> list[str]:
+    return [t for t in (texto or "").split(",") if t]
 
 
 def zona_de(categoria: str | None) -> str | None:

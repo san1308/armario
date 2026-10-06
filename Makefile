@@ -1,4 +1,4 @@
-.PHONY: setup install run test build up down logs migrate importar
+.PHONY: setup install run test build up down logs migrate importar temporadas
 
 setup:
 	python3.12 -m venv .venv
@@ -32,3 +32,7 @@ logs:
 # make importar EMAIL=mama@ejemplo.com
 importar:
 	docker compose exec armario python -m scripts.importar --email $(EMAIL) --carpeta importar --clasificacion scripts/clasificacion_inicial.csv
+
+# Para armarios importados antes de las temporadas: make temporadas EMAIL=mama@ejemplo.com
+temporadas:
+	docker compose exec armario python -m scripts.aplicar_temporadas --email $(EMAIL) --clasificacion scripts/clasificacion_inicial.csv

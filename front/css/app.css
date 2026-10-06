@@ -153,6 +153,17 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 }
 
 .mandos { display: grid; gap: 10px; min-width: 0; }
+/* Selector de temporada: control segmentado discreto encima de las zonas */
+.temporadas {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 3px;
+  border-radius: 999px; background: color-mix(in srgb, var(--tinta) 6%, transparent);
+}
+.temporada {
+  min-height: 32px; padding: 0 6px; border: 0; border-radius: 999px; background: none;
+  font-size: .82rem; font-weight: 600; color: var(--tinta-2); cursor: pointer; white-space: nowrap;
+}
+.temporada[aria-checked="true"] { background: var(--superficie); color: var(--tinta); box-shadow: 0 1px 3px rgba(42,31,43,.12); }
+
 .zonas { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .zonas::-webkit-scrollbar { display: none; }
 .zona-chip {
@@ -207,6 +218,8 @@ input[type="range"] { width: 100%; accent-color: var(--acento); }
   color: var(--tinta-2); cursor: pointer;
 }
 .filtro[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: var(--fondo); }
+.filtros-temporada { margin-top: -6px; }
+.filtros-temporada .filtro { min-height: 32px; font-size: .85rem; }
 .filtro .n { opacity: .65; margin-left: 4px; font-variant-numeric: tabular-nums; }
 .filtro.destacado:not([aria-pressed="true"]) { border-color: var(--acento); color: var(--acento); }
 
@@ -280,6 +293,10 @@ input[type="range"] { width: 100%; accent-color: var(--acento); }
   min-height: 38px; padding: 0 12px; border-radius: var(--r-s);
   border: 1px solid var(--linea); background: none; font-size: .9rem; cursor: pointer;
 }
+.temporadas-ficha { display: flex; gap: 6px; }
+.navegacion { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.posicion { font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.temporadas-ficha .cat { flex: 1; }
 .cat[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--acento-tinta); font-weight: 600; }
 
 .campo { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--tinta-2); }

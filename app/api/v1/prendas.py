@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session
 
 from app.core.auth import usuario_actual
-from app.core.categorias import POR_SLUG, ZONA_SLUGS
+from app.core.categorias import POR_SLUG, TEMPORADA_SLUGS, ZONA_SLUGS
 from app.core.database import get_session
 from app.models import Prenda, Usuario
 from app.schemas import PrendaRead, PrendaUpdate
@@ -28,12 +28,15 @@ def listar(
     zona: Optional[str] = None,
     categoria: Optional[str] = None,
     sin_clasificar: bool = False,
+    temporada: Optional[str] = None,
     session: Session = Depends(get_session),
     usuario: Usuario = Depends(usuario_actual),
 ):
     if zona and zona not in ZONA_SLUGS:
         raise HTTPException(422, "Zona desconocida.")
-    prendas = prenda_service.listar(session, usuario, zona, categoria, sin_clasificar)
+    if temporada and temporada != "ninguna" and temporada not in TEMPORADA_SLUGS:
+        raise HTTPException(422, "Temporada desconocida.")
+    prendas = prenda_service.listar(session, usuario, zona, categoria, sin_clasificar, temporada)
     return [PrendaRead.desde(p) for p in prendas]
 
 

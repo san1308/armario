@@ -13,10 +13,16 @@ export function abrirFicha(id, ids = []) {
   if (!dlg().open) dlg().showModal();
 }
 
-function siguienteSinClasificar(idActual) {
-  const i = recorrido.indexOf(idActual);
-  const resto = [...recorrido.slice(i + 1), ...recorrido.slice(0, Math.max(i, 0))];
-  return resto.map(prendaPorId).find((p) => p && !p.categoria && p.id !== idActual);
+/** Botones para recorrer la lista desde la que se abrió la ficha (clasificar en serie). */
+function navegacion(idActual) {
+  const ids = recorrido.filter((id) => prendaPorId(id));
+  const i = ids.indexOf(idActual);
+  if (ids.length < 2 || i < 0) return null;
+  const ir = (paso) => pintar(ids[(i + paso + ids.length) % ids.length]);
+  return el('div.navegacion', {},
+    el('button.btn', { onclick: () => ir(-1) }, 'Anterior'),
+    el('span.posicion', {}, `${i + 1} de ${ids.length}`),
+    el('button.btn.btn-primario', { onclick: () => ir(1) }, 'Siguiente'));
 }
 
 async function guardar(p, cambios) {
@@ -32,16 +38,37 @@ function seccionCategorias(p) {
       el('button.cat', {
         'aria-pressed': String(p.categoria === c.slug),
         onclick: async () => {
-          const eraSinClasificar = !p.categoria;
           try {
             await guardar(p, { categoria: c.slug });
-            const sig = eraSinClasificar ? siguienteSinClasificar(p.id) : null;
-            if (sig) { aviso(`${c.nombre}. Siguiente prenda`); pintar(sig.id); }
-            else { aviso(`Guardado como ${c.nombre.toLowerCase()}`); pintar(p.id); }
+            aviso(`Guardado como ${c.nombre.toLowerCase()}`);
+            repintarConservandoScroll(p.id);
           } catch (e) { aviso(`No se pudo guardar: ${e.message}`); }
         },
       }, c.nombre)))));
   return el('div.seccion', {}, el('span.seccion-titulo', {}, '¿Qué es?'), el('div.categorias', {}, grupos));
+}
+
+function seccionTemporadas(p) {
+  const botones = estado.temporadas.map((t) => el('button.cat', {
+    'aria-pressed': String(p.temporadas.includes(t.slug)),
+    onclick: async () => {
+      const nuevas = p.temporadas.includes(t.slug) ? p.temporadas.filter((x) => x !== t.slug) : [...p.temporadas, t.slug];
+      try { await guardar(p, { temporadas: nuevas }); repintarConservandoScroll(p.id); }
+      catch (e) { aviso(`No se pudo guardar: ${e.message}`); }
+    },
+  }, t.nombre));
+  return el('div.seccion', {},
+    el('span.seccion-titulo', {}, '¿Cuándo se pone?'),
+    el('div.temporadas-ficha', {}, botones),
+    el('p.ayuda', {}, p.temporadas.length ? 'Puedes marcar varias.' : 'Sin marcar, sale en todas las temporadas.'));
+}
+
+/** Repinta la ficha sin saltar arriba (al tocar categoría o temporada). */
+function repintarConservandoScroll(id) {
+  const caja = dlg();   // el <dialog> es el que hace scroll
+  const y = caja.scrollTop;
+  pintar(id);
+  caja.scrollTop = y;
 }
 
 function seccionNombre(p) {
@@ -120,12 +147,14 @@ function pintar(id) {
   cont.replaceChildren(
     el('div.hoja-cuerpo', { style: 'padding:0' },
       imagen,
+      navegacion(p.id),
       seccionCategorias(p),
+      seccionTemporadas(p),
       seccionNombre(p),
       p.estado === 'lista' ? seccionCorte(p) : null,
       el('div.fila-botones', {}, probar, p.estado !== 'pendiente' && p.estado !== 'procesando' ? reprocesar : null),
       borrar));
-  cont.parentElement.scrollTop = 0;
+  dlg().scrollTop = 0;
 }
 
 export function iniciarFicha() {

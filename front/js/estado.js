@@ -4,6 +4,7 @@ import { api } from './api.js';
 export const estado = {
   usuario: null,
   zonas: [],            // [{slug, nombre}]
+  temporadas: [],       // [{slug, nombre}]
   categorias: [],       // [{slug, nombre, zona}]
   prendas: [],          // todas las del usuario
   conjuntos: [],
@@ -16,6 +17,18 @@ const avisar = () => oyentes.forEach((fn) => fn());
 export const categoria = (slug) => estado.categorias.find((c) => c.slug === slug);
 export const nombreCategoria = (slug) => categoria(slug)?.nombre ?? 'Sin clasificar';
 export const prendaPorId = (id) => estado.prendas.find((p) => p.id === id);
+/** ¿Se puede poner en esta temporada? Sin temporadas asignadas = todo el año. */
+export const valeParaTemporada = (p, temporada) => !temporada || !p.temporadas.length || p.temporadas.includes(temporada);
+export const nombreTemporada = (slug) => estado.temporadas.find((t) => t.slug === slug)?.nombre ?? slug;
+
+/** Temporada actual según el mes (hemisferio norte). */
+export function temporadaDeHoy(fecha = new Date()) {
+  const m = fecha.getMonth() + 1;
+  if (m >= 6 && m <= 9) return 'verano';
+  if (m === 12 || m <= 2) return 'invierno';
+  return 'entretiempo';
+}
+
 export const listasDeZona = (zona) => estado.prendas.filter((p) => p.zona === zona && p.estado === 'lista');
 export const hayPendientes = () => estado.prendas.some((p) => p.estado === 'pendiente' || p.estado === 'procesando');
 
@@ -23,7 +36,9 @@ export async function cargarTodo() {
   const [usuario, catalogo, prendas, conjuntos] = await Promise.all([
     api.yo(), api.catalogo(), api.prendas(), api.conjuntos(),
   ]);
-  Object.assign(estado, { usuario, zonas: catalogo.zonas, categorias: catalogo.categorias, prendas, conjuntos });
+  Object.assign(estado, {
+    usuario, zonas: catalogo.zonas, categorias: catalogo.categorias, temporadas: catalogo.temporadas, prendas, conjuntos,
+  });
   avisar();
 }
 

@@ -6,34 +6,37 @@ import { aviso, el } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 const TANDA = 4;           // fotos por petición: evita peticiones enormes desde el móvil
-let filtro = null;          // null = todas, 'sin' = sin clasificar, o slug de zona
+let filtro = null;          // tipo: null = todas, 'sin' = sin clasificar, o slug de zona
+let filtroTemp = null;      // temporada: null = todas, 'ninguna' = sin temporada, o slug
 let sondeo = null;
 
-function contar(f) {
-  if (f === null) return estado.prendas.length;
-  if (f === 'sin') return estado.prendas.filter((p) => !p.categoria).length;
-  return estado.prendas.filter((p) => p.zona === f).length;
-}
+const pasaTipo = (p, f = filtro) => f === null || (f === 'sin' ? !p.categoria : p.zona === f);
+const pasaTemp = (p, f = filtroTemp) => f === null || (f === 'ninguna' ? !p.temporadas.length : p.temporadas.includes(f));
+const filtradas = () => estado.prendas.filter((p) => pasaTipo(p) && pasaTemp(p));
 
-function filtradas() {
-  if (filtro === null) return estado.prendas;
-  if (filtro === 'sin') return estado.prendas.filter((p) => !p.categoria);
-  return estado.prendas.filter((p) => p.zona === filtro);
-}
-
-function renderFiltros() {
-  const opciones = [[null, 'Todas'], ['sin', 'Sin clasificar'], ...estado.zonas.map((z) => [z.slug, z.nombre])];
-  const cont = $('filtros');
+function filaFiltros(contenedor, opciones, actual, contar, alElegir, destacado) {
+  const cont = $(contenedor);
   cont.replaceChildren();
   for (const [valor, texto] of opciones) {
     const n = contar(valor);
-    if (valor !== null && !n) continue;
-    const b = el('button.filtro', { 'aria-pressed': String(filtro === valor), onclick: () => { filtro = valor; render(); } },
+    if (valor !== null && !n && valor !== actual) continue;
+    const b = el('button.filtro', { 'aria-pressed': String(actual === valor), onclick: () => { alElegir(valor); render(); } },
       texto, el('span.n', {}, String(n)));
-    if (valor === 'sin') b.classList.add('destacado');
+    if (valor === destacado) b.classList.add('destacado');
     cont.append(b);
   }
-  if (filtro !== null && !contar(filtro)) filtro = null;
+}
+
+function renderFiltros() {
+  // Cada fila cuenta teniendo en cuenta el filtro de la otra
+  filaFiltros('filtros',
+    [[null, 'Todas'], ['sin', 'Sin clasificar'], ...estado.zonas.map((z) => [z.slug, z.nombre])],
+    filtro, (v) => estado.prendas.filter((p) => pasaTipo(p, v) && pasaTemp(p)).length,
+    (v) => { filtro = v; }, 'sin');
+  filaFiltros('filtros-temporada',
+    [[null, 'Todas las temporadas'], ...estado.temporadas.map((t) => [t.slug, t.nombre]), ['ninguna', 'Sin temporada']],
+    filtroTemp, (v) => estado.prendas.filter((p) => pasaTipo(p) && pasaTemp(p, v)).length,
+    (v) => { filtroTemp = v; }, 'ninguna');
 }
 
 function tarjeta(p, lista) {
