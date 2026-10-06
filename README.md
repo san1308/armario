@@ -126,8 +126,9 @@ curl localhost:8006/api/v1/health
 ```
 
 En Cloudflare:
-1. **Tunnel** → Public hostname: `armario.domoticia.fun` → `http://localhost:8006`
-   (o `http://armario:8006` si `cloudflared` corre en la misma red Docker).
+1. **Tunnel `ha-rpi5`** → Published application routes → Add:
+   `armario.domoticia.fun` → `http://192.168.1.119:8006` (igual que despensa y futsal;
+   `cloudflared` corre en Docker y llega a la Pi por su IP de la LAN).
 2. **Access** → Applications → Self-hosted: `armario.domoticia.fun`, política
    *Allow* con los emails de quien vaya a usarla.
 3. Copiar el **AUD** de la aplicación al `.env` y `make up` de nuevo.
