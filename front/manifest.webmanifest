@@ -1,0 +1,12 @@
+{
+  "name": "Armario",
+  "short_name": "Armario",
+  "start_url": "./#probador",
+  "display": "standalone",
+  "background_color": "#f5f1f3",
+  "theme_color": "#7b3b67",
+  "icons": [
+    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

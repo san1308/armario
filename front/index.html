@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Armario</title>
+  <meta name="theme-color" content="#f5f1f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#18131a" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Armario">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icono-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- ── PROBADOR ─────────────────────────────────────────────────────── -->
+    <section class="vista" id="vista-probador" data-vista="probador">
+      <div class="probador">
+        <div class="espejo-zona">
+          <div class="espejo" id="espejo" aria-label="Espejo: desliza para cambiar la prenda seleccionada">
+            <div class="espejo-vacio" id="espejo-vacio" hidden></div>
+          </div>
+          <div class="espejo-flechas">
+            <button class="flecha" id="btn-anterior" aria-label="Prenda anterior">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+            </button>
+            <button class="flecha" id="btn-siguiente" aria-label="Prenda siguiente">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="mandos">
+          <div class="zonas" id="zonas" role="tablist" aria-label="Qué parte cambiar"></div>
+          <div class="tira-cabecera">
+            <span id="tira-titulo" class="tira-titulo"></span>
+            <button class="btn-texto" id="btn-fijar" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              <span>Fijar</span>
+            </button>
+            <button class="btn-texto" id="btn-ajustar" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+              <span>Ajustar</span>
+            </button>
+          </div>
+          <div class="ajuste" id="ajuste" hidden>
+            <label>Tamaño <input type="range" id="ajuste-escala" min="0.5" max="1.8" step="0.02"></label>
+            <label>Altura <input type="range" id="ajuste-altura" min="-0.35" max="0.35" step="0.01"></label>
+            <button class="btn-texto" id="ajuste-reset">Restablecer</button>
+          </div>
+          <div class="tira" id="tira" role="listbox" aria-label="Prendas"></div>
+          <div class="acciones">
+            <button class="btn" id="btn-sorpresa">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" class="relleno"/><circle cx="15.5" cy="15.5" r="1.3" class="relleno"/><circle cx="15.5" cy="8.5" r="1.3" class="relleno"/><circle cx="8.5" cy="15.5" r="1.3" class="relleno"/></svg>
+              Sorpréndeme
+            </button>
+            <button class="btn btn-primario" id="btn-guardar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+              Guardar conjunto
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ARMARIO ──────────────────────────────────────────────────────── -->
+    <section class="vista" id="vista-armario" data-vista="armario" hidden>
+      <header class="cabecera">
+        <h1>Armario</h1>
+        <label class="btn btn-primario" id="btn-subir">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Añadir fotos
+          <input type="file" id="input-fotos" accept="image/*,.heic,.heif" multiple hidden>
+        </label>
+      </header>
+      <div class="filtros" id="filtros"></div>
+      <p class="aviso" id="aviso-procesando" hidden></p>
+      <div class="rejilla" id="rejilla"></div>
+    </section>
+
+    <!-- ── CONJUNTOS ────────────────────────────────────────────────────── -->
+    <section class="vista" id="vista-conjuntos" data-vista="conjuntos" hidden>
+      <header class="cabecera"><h1>Conjuntos</h1></header>
+      <div class="rejilla rejilla-conjuntos" id="lista-conjuntos"></div>
+    </section>
+
+    <!-- ── NAVEGACIÓN ───────────────────────────────────────────────────── -->
+    <nav class="nav" aria-label="Secciones">
+      <a href="#probador" data-ir="probador">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21V9a5 5 0 0 1 10 0v12z"/><path d="M5 21h14"/></svg>
+        Probador
+      </a>
+      <a href="#armario" data-ir="armario">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6a2 2 0 1 1 2-2"/><path d="M12 6v1.5L3 15h18l-9-7.5"/><path d="M3 15v1h18v-1"/></svg>
+        Armario
+      </a>
+      <a href="#conjuntos" data-ir="conjuntos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+        Conjuntos
+      </a>
+    </nav>
+  </div>
+
+  <!-- ── FICHA DE PRENDA (hoja inferior en móvil, panel en ordenador) ────── -->
+  <dialog class="hoja" id="hoja-prenda" aria-labelledby="hoja-titulo">
+    <div class="hoja-cuerpo">
+      <header class="hoja-cabecera">
+        <h2 id="hoja-titulo">Prenda</h2>
+        <button class="btn-icono" data-cerrar aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div id="hoja-contenido"></div>
+    </div>
+  </dialog>
+
+  <!-- ── GUARDAR CONJUNTO ─────────────────────────────────────────────────── -->
+  <dialog class="hoja hoja-corta" id="hoja-guardar" aria-labelledby="guardar-titulo">
+    <form class="hoja-cuerpo" method="dialog" id="form-guardar">
+      <header class="hoja-cabecera">
+        <h2 id="guardar-titulo">Guardar conjunto</h2>
+        <button class="btn-icono" type="button" data-cerrar aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <label class="campo">Nombre (opcional)
+        <input type="text" id="guardar-nombre" maxlength="100" placeholder="Por ejemplo: cena del sábado" autocomplete="off">
+      </label>
+      <button class="btn btn-primario btn-ancho" type="submit">Guardar conjunto</button>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

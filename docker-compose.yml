@@ -1,0 +1,26 @@
+services:
+  armario:
+    build: .
+    image: armario:latest
+    container_name: armario
+    restart: unless-stopped
+    ports:
+      - "8006:8006"
+    volumes:
+      - armario_data:/app/data
+      # Carpeta para la importación masiva inicial (scripts/importar.py)
+      - ./importar:/app/importar:ro
+    env_file:
+      - .env
+    # El modelo de recorte usa ~1 GB de RAM mientras procesa una foto
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  armario_data:
+    driver: local
